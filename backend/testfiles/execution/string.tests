@@ -566,6 +566,13 @@ String.padEnd_v0 "🧟‍♀️🧟‍♂️" "0" 5 = "🧟‍♀️🧟‍♂�
 String.padEnd_v0 "👨‍❤️‍💋‍👨👩‍👩‍👧‍👦🏳️‍⚧️🇵🇷" "0" 10 = "👨‍❤️‍💋‍👨👩‍👩‍👧‍👦🏳️‍⚧️🇵🇷000000"
 String.padEnd_v0 "鷝" "觌഻" 0 = "鷝"
 
+String.take_v0 "123456" 3 = "123"
+String.take_v0 "👨‍❤️‍💋‍👨👩‍👩‍👧‍👦🏳️‍⚧️🇵🇷" 3 = "👨‍❤️‍💋‍👨👩‍👩‍👧‍👦🏳️‍⚧️"
+String.take_v0 "﷽﷽﷽﷽﷽﷽﷽﷽" 2 = "﷽﷽"
+String.take_v0 "123" -6 = "" // return an empty string for negatives (so that it works the same as List::take)
+String.take_v0 "żółw🧑🏽‍🦰🧑🏻‍🍼✋✋🏻✋🏿" 0 = ""
+String.take_v0 "123🍊🍊" 10 = "123🍊🍊"
+
 // Check that foreach executes the right number of times
 (let v = String.foreach_v1 "a string" (fun x -> let _ = Test.incrementSideEffectCounter_v0 false in 'c') in
  (v, Test.sideEffectCount_v0)) = ("cccccccc", 8)

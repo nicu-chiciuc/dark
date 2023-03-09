@@ -917,4 +917,24 @@ let fns : List<BuiltInFn> =
         | _ -> incorrectArgs ())
       sqlSpec = NotYetImplemented
       previewable = Pure
+      deprecated = NotDeprecated }
+
+    { name = fn "String" "take" 0
+      parameters = [ Param.make "subject" TStr "String"; Param.make "count" TInt "" ]
+      returnType = TStr
+      description =
+        "Drops all but the first <param count> characters from <param subject>"
+      fn =
+        (function
+        | _, [ DStr subject; DInt count ] ->
+          if count < 0 then
+            Ply(DStr "")
+          else
+            let result =
+              String.toEgcSeq subject |> Seq.truncate (int count) |> String.concat ""
+
+            Ply(DStr result)
+        | _ -> incorrectArgs ())
+      sqlSpec = NotYetImplemented
+      previewable = Pure
       deprecated = NotDeprecated } ]
