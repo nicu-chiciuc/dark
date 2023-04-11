@@ -1,0 +1,103 @@
+[<HttpHandler("GET", "/")>]
+let handler req =
+  let body = "hello"
+  let maybeFile = File.read "/home/dark/app/canvases/nicu-canvas/index.html"
+
+  let file = match maybeFile with
+    | Ok file -> file
+    | Error -> "File not found"
+
+  Http.responseWithHeaders
+    (file)
+    (Dict.fromListOverwritingDuplicates [ ("Content-Type", "text/html") ])
+    200
+
+
+
+[<HttpHandler("GET", "/get-prompt")>]
+let handler req =
+  let filePath = "/home/dark/app/canvases/nicu-canvas/prompt.txt"
+  let prompt = File.read filePath
+
+  let respBody =
+    match prompt with
+    | Ok p ->  p
+    | Error _ -> Bytes.empty
+
+  Http.response respBody 200
+
+
+[<HttpHandler("GET", "/save-prompt")>]
+let handler req =
+  let filePath = "/home/dark/app/canvases/nicu-canvas/prompt.txt"
+  let contents =  request.body
+  let result = File.write filePath contents
+
+  match result with
+  | Ok r ->   Http.response r 200
+  | Error e ->  Http.response e 400
+
+
+
+
+type OpenAICompletionRequest = {
+  model: String
+  max_tokens: Int
+  temperature: Float
+  prompt : String
+}
+
+[<HttpHandler("POST", "/api/gpt4")>]
+let _handler _req =
+  let apiKey = OPENAI_API_KEY
+
+  let reqBody =
+    let prompt = request.body |> String.fromBytes
+    let serialized =
+      { model= "text-davinci-003"
+        max_tokens= 300
+        temperature= 0.7
+        prompt= prompt}
+      |> Json.serialize<OpenAICompletionRequest>
+    match serialized with
+    | Ok r -> r |> String.toBytes
+    | Error e -> Bytes.empty
+
+  let headers =
+    [
+      ("Authorization", "Bearer " ++ apiKey)
+      ("Content-Type", "application/json")
+    ]
+
+  let response = HttpClient.request "POST" "https://api.openai.com/v1/completions" headers reqBody
+
+  match response with
+  | Ok r -> Http.response r.body 200
+  | Error e -> Http.response e 400
+
+[<HttpHandler("GET", "/api/envvars")>]
+let handler req =
+  let files =
+    Directory.pwd
+    |> Directory.ls
+    |> Json.serialize<List<String>>
+
+  let varName = "DOTNET_RUNNING_IN_CONTAINER"
+
+  let _ = "Transofrming to list so that we can serialize it"
+  let envsToList = Dict.toList EnvVar.getAll
+
+  let maybeEnvs = Json.serialize<List<Tuple<String, String>>> envsToList
+  let maybeEnv = EnvVar.get varName
+
+  let singleEnv = match maybeEnv with
+  | Just env -> $"{varName} is {env}"
+  | None -> $"{varName} not found"
+
+  let allEnvs = match maybeEnvs with
+  | Ok envs -> envs
+  | Error -> "An error during retrieval"
+
+
+  Http.response (String.toBytes allEnvs) 200
+
