@@ -1,0 +1,13 @@
+(
+  let body = "hello"
+  let maybeFile = File.read "canvases/dark-cli-nicu/index.html"
+
+  let file = match maybeFile with
+    | Ok file -> file
+    | Error -> "File not found"
+
+  Http.responseWithHeaders
+    (file)
+    (Dict.fromListOverwritingDuplicates [ ("Content-Type", "text/html") ])
+    200
+)
