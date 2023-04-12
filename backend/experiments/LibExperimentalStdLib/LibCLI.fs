@@ -142,4 +142,31 @@ let fns : List<BuiltInFn> =
         | _ -> incorrectArgs ())
       sqlSpec = NotQueryable
       previewable = Impure
-      deprecated = NotDeprecated } ]
+      deprecated = NotDeprecated }
+
+
+    { name = fn "File" "appendText" 0
+      typeParams = []
+      parameters = [ Param.make "path" TString ""; Param.make "contents" TString "" ]
+      returnType = TResult(TUnit, TString)
+      description =
+        "Appends the specified text <param contents> to the file specified by <param path> asynchronously"
+      fn =
+        (function
+        | _, _, [ DString path; DString contents ] ->
+          uply {
+            try
+              do! System.IO.File.AppendAllTextAsync(path, contents)
+              return DResult(Ok(DUnit))
+            with
+            | e ->
+              return DResult(Error(DString($"Error appending to file: {e.Message}")))
+          }
+        | _ -> incorrectArgs ())
+      sqlSpec = NotQueryable
+      previewable = Impure
+      deprecated = NotDeprecated }
+
+
+
+    ]

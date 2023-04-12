@@ -1,13 +1,22 @@
 let currentCanvasPath () =
     "/home/dark/app/canvases/nicu-canvas/"
 
-
 let getApiKey () =
   let maybeKey = File.read (currentCanvasPath () ++ "openai-api-key.txt")
 
   match maybeKey with
   | Ok key -> key |> String.fromBytes
   | Error _ -> ""
+
+
+let logToFile (contents: String) =
+  let filePath = currentCanvasPath () ++ "log.txt"
+  let currentTimeStr = DateTime.now |> DateTime.toString
+
+  let result = File.appendText filePath (currentTimeStr ++ "  " ++ contents ++ "\n")
+
+  result
+
 
 type AnalyticsAction =
   | CodeExecuted
@@ -46,6 +55,8 @@ let handler req =
   let filePath = currentCanvasPath () ++ "prompt.txt"
   let prompt = File.read filePath
 
+  logToFile "Got prompt"
+
   let respBody =
     match prompt with
     | Ok p ->  p
@@ -59,6 +70,10 @@ let handler req =
   let filePath = currentCanvasPath () ++ "prompt.txt"
   let contents =  request.body
   let result = File.write filePath contents
+
+
+  // Save to DB
+
 
   match result with
   | Ok r ->   Http.response r 200
