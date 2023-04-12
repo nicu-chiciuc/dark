@@ -5,125 +5,207 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dark Editor - GPT-4 API</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body,
+    html {
+      margin: 0;
+      height: 100%;
+    }
+
+    .split-container {
+      display: flex;
+      height: 100%;
+    }
+
+    .left-half,
+    .right-half {
+      height: 100%;
+      flex: 1;
+      padding: 20px;
+    }
+
+    .left-half {
+      background-color: #f9f9f9;
+    }
+
+    .right-half {
+      background-color: #ddd;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+
+    #dark-prompt {
+      height: 20%;
+    }
+
+    input[type="text"],
+    input[type="submit"],
+    #copy-btn,
+    #save-prompt,
+    #get-prompt,
+    #vars-btn {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    #save-prompt,
+    #get-prompt,
+    #vars-btn,
+    #copy-btn {
+      width: auto;
+    }
+
+    input[type="submit"],
+    #copy-btn,
+    #save-prompt,
+    #get-prompt,
+    #vars-btn {
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #45a049;
+    }
+
+    textarea:disabled {
+      background-color: #f2f2f2;
+      color: #aaa;
+    }
+
+    form {
+      height: 80%;
+    }
+
+    #var-form {
+      height: auto;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="app" class="h-full flex">
-    <div class="w-1/2 p-4 bg-gray-100">
-      <form @submit.prevent="handleSubmit" class="flex flex-col h-full">
-        <input type="text" name="dark-editor" v-model="darkEditor" class="mb-4 p-2 border border-gray-300 rounded" />
-        <textarea id="dark-prompt" name="dark-prompt" v-model="darkPrompt"
-          class="mb-4 h-20 p-2 border border-gray-300 rounded resize-none"></textarea>
+  <div class="split-container">
+    <div class="left-half">
+      <form id="gpt4-form">
+        <input type="text" name="dark-editor" value="dark-editor" />
+        <textarea id="dark-prompt" name="dark-prompt"> </textarea>
 
-        <button @click="getPrompt" class="mb-4 px-4 py-2 bg-green-500 text-white rounded">Get prompt</button>
-        <button @click="savePrompt" class="mb-4 px-4 py-2 bg-green-500 text-white rounded">Save the new prompt</button>
+        <button id="get-prompt">Get prompt</button>
+        <button id="save-prompt">Save the new prompt</button>
 
-        <textarea name="prompt" v-model="prompt" placeholder="Insert prompt here"
-          class="mb-4 flex-grow p-2 border border-gray-300 rounded resize-none"></textarea>
-        <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded">Submit</button>
+        <textarea name="prompt" placeholder="Insert prompt here"></textarea>
+        <input type="submit" value="Submit" />
       </form>
     </div>
-    <div class="w-1/2 p-4 bg-gray-200">
-      <textarea id="output" v-model="output" disabled
-        class="mb-4 w-full h-80 p-2 bg-gray-300 text-gray-600 border border-gray-300 rounded resize-none"></textarea>
-      <form @submit.prevent="handleVarFormSubmit" class="mb-4">
-        <div v-for="(variable, index) in variables" :key="index">
-          <label>{{ variable }}</label>
-          <input name="variable" v-model="formElements[index]" class="mb-2 p-2 border border-gray-300 rounded" />
-        </div>
-        <button v-if="variables.length > 0" type="submit"
-          class="px-4 py-2 bg-green-500 text-white rounded">Submit</button>
-      </form>
-      <button @click="copy" class="px-4 py-2 bg-green-500 text-white rounded">Copy code</button>
-      <button @click="fillVariables" class="px-4 py-2 bg-green-500 text-white rounded">Fill variables</button>
+    <div class="right-half">
+      <textarea id="output" disabled></textarea>
+      <form id="var-form"> </form>
+      <button id="copy-btn">Copy code</button>
+      <button id="vars-btn">Fill variables</button>
     </div>
   </div>
-
   <script>
-    const { createApp, ref, reactive } = Vue;
+    document
+      .getElementById("gpt4-form")
+      .addEventListener("submit", async event => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const prompt = formData.get("prompt");
+        const darkPrompt = formData.get("dark-prompt");
+        console.log(darkPrompt + prompt);
+        const response = await fetch("/api/gpt4", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: darkPrompt + prompt,
+        });
 
-    const app = createApp({
-      setup() {
-        const darkEditor = ref('dark-editor');
-        const darkPrompt = ref('');
-        const prompt = ref('');
-        const output = ref('');
-        const variables = ref([]);
-        const formElements = reactive([]);
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById("output").value = data.choices[0].text;
+        } else {
+          window.response = response;
+          let text = await response.text();
+          document.getElementById("output").value =
+            "Error calling the GPT-4 API: " + response.status + " " + response.statusText + " " + text;
+        }
+      });
 
-        const handleSubmit = async () => {
-          const response = await fetch("/api/gpt4", {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: darkPrompt.value + prompt.value,
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            output.value = data.choices[0].text;
-          } else {
-            const text = await response.text();
-            output.value =
-              "Error calling the GPT-4 API: " + response.status + " " + response.statusText + " " + text;
-          }
-        };
-
-        const getPrompt = async () => {
-          const response = await fetch('/get-prompt');
-          if (response.ok) {
-            darkPrompt.value = await response.text();
-          } else {
-            console.error('Error fetching prompt:', response.statusText);
-          }
-        };
-
-        const savePrompt = async () => {
-          const response = await fetch("/save-prompt", {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: darkPrompt.value,
-          });
-        };
-
-        const copy = () => {
-          navigator.clipboard.writeText(output.value).then(() => {
-            console.log("Text copied to clipboard");
-          }).catch((error) => {
-            console.error('Error copying text to clipboard:', error);
-          });
-        };
-
-        const fillVariables = () => {
-          const foundVariables = output.value.match(/variables:\n([\s\S]*)/)[1].trim().split('\n').filter(Boolean);
-          variables.value = foundVariables;
-        };
-
-        const handleVarFormSubmit = () => {
-          for (let i = 0; i < variables.value.length; i++) {
-            console.log(variables.value[i] + ': ' + formElements[i]);
-          }
-        };
-
-        return {
-          darkEditor,
-          darkPrompt,
-          prompt,
-          output,
-          variables,
-          formElements,
-          handleSubmit,
-          getPrompt,
-          savePrompt,
-          copy,
-          fillVariables,
-          handleVarFormSubmit
-        };
-      },
+    const copyBtn = document.getElementById("copy-btn");
+    copyBtn.addEventListener("click", () => {
+      const output = document.getElementById("output");
+      navigator.clipboard.writeText(output.value).then(() => {
+        console.log("Text copied to clipboard");
+      }).catch((error) => {
+        console.error('Error copying text to clipboard:', error);
+      });
     });
 
-    app.mount('#app');
+    const VarsBtn = document.getElementById("vars-btn");
+    VarsBtn.addEventListener("click", () => {
+      const variables = output.value.match(/variables:\n([\s\S]*)/)[1].trim().split('\n').filter(Boolean);
+      console.log(variables);
+      const form = document.getElementById("var-form");
+      const submitButton = document.createElement('button');
+      submitButton.type = 'submit';
+      submitButton.textContent = 'Submit';
+      for (let i = 0; i < variables.length; i++) {
+        const label = document.createElement('label');
+        label.textContent = variables[i];
+        const input = document.createElement('input');
+        input.name = variables[i];
+        form.appendChild(label);
+        form.appendChild(input);
+      }
+      form.appendChild(submitButton);
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const formData = new FormData(form);
+        for (let pair of formData.entries()) {
+          console.log(pair[1]);
+        }
+      });
+    });
+
+    const saveBtn = document.getElementById("save-prompt");
+    saveBtn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const prompt = document.getElementById("dark-prompt").value;
+      const response = await fetch("/save-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: prompt,
+      });
+    });
+
+    const getPromptBtn = document.getElementById("get-prompt");
+    getPromptBtn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      fetch('/get-prompt')
+        .then(response => response.text())
+        .then(data => {
+          const textarea = document.getElementById("dark-prompt");
+          textarea.value = data;
+        })
+        .catch(error => console.error(error));
+    });
+
   </script>
 </body>
 

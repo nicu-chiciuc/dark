@@ -1,7 +1,26 @@
+let currentCanvasPath () =
+    "/home/dark/app/canvases/nicu-canvas/"
+
+type AnalyticsAction =
+  | CodeExecuted
+  | ThumbsUp
+  | ThumbsDown
+  | CodeExecuted of hasInputVariables: Bool
+
+[<DB("Analytics")>]
+type Analytics =
+  { SessionID: Uuid
+    DarkPrompt: String
+    UserPrompt: String
+    GeneratedCode: String
+
+    // We assume it'll be of type AnalyticsAction
+    ActionJson: String}
+
 [<HttpHandler("GET", "/")>]
 let handler req =
   let body = "hello"
-  let maybeFile = File.read "/home/dark/app/canvases/nicu-canvas/index.html"
+  let maybeFile = File.read (currentCanvasPath () ++ "index.html")
 
   let file = match maybeFile with
     | Ok file -> file
@@ -16,7 +35,7 @@ let handler req =
 
 [<HttpHandler("GET", "/get-prompt")>]
 let handler req =
-  let filePath = "/home/dark/app/canvases/nicu-canvas/prompt.txt"
+  let filePath = currentCanvasPath () ++ "prompt.txt"
   let prompt = File.read filePath
 
   let respBody =
@@ -29,7 +48,7 @@ let handler req =
 
 [<HttpHandler("GET", "/save-prompt")>]
 let handler req =
-  let filePath = "/home/dark/app/canvases/nicu-canvas/prompt.txt"
+  let filePath = currentCanvasPath () ++ "prompt.txt"
   let contents =  request.body
   let result = File.write filePath contents
 
@@ -49,7 +68,8 @@ type OpenAICompletionRequest = {
 
 [<HttpHandler("POST", "/api/gpt4")>]
 let _handler _req =
-  let apiKey = OPENAI_API_KEY
+  let _ = "IMPORTAT, remove before commit"
+  let apiKey = "nothing"
 
   let reqBody =
     let prompt = request.body |> String.fromBytes
