@@ -1,6 +1,14 @@
 let currentCanvasPath () =
     "/home/dark/app/canvases/nicu-canvas/"
 
+
+let getApiKey () =
+  let maybeKey = File.read (currentCanvasPath () ++ "openai-api-key.txt")
+
+  match maybeKey with
+  | Ok key -> key |> String.fromBytes
+  | Error _ -> ""
+
 type AnalyticsAction =
   | CodeExecuted
   | ThumbsUp
@@ -69,7 +77,7 @@ type OpenAICompletionRequest = {
 [<HttpHandler("POST", "/api/gpt4")>]
 let _handler _req =
   let _ = "IMPORTAT, remove before commit"
-  let apiKey = "nothing"
+  let apiKey = getApiKey ()
 
   let reqBody =
     let prompt = request.body |> String.fromBytes
