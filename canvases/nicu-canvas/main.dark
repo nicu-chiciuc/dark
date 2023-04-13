@@ -1,3 +1,34 @@
+type AnalyticsAction =
+  | ThumbsUp
+  | ThumbsDown
+  | CodeExecuted of Bool
+
+[<DB("AnalyticsDB")>]
+type Analytics =
+  { SessionID: Uuid
+    DarkPrompt: String
+    UserPrompt: String
+    GeneratedCode: String
+
+    // We assume it'll be of type AnalyticsAction
+    ActionJson: String}
+
+[<HttpHandler("GET", "/api/get-all-analytics")>]
+let handler req =
+  let allAnalytics = DB.getAll_v3 AnalyticsDB
+
+
+  let serialized = allAnalytics |> Json.serialize<List<Analytics>>
+
+
+  match serialized with
+  | Ok s -> Http.response (String.toBytes s) 200
+  | Error _ -> Http.response "An error occured" 400
+
+
+
+
+
 let currentCanvasPath () =
     "/home/dark/app/canvases/nicu-canvas/"
 
@@ -17,22 +48,31 @@ let logToFile (contents: String) =
 
   result
 
+let addAnalytics (action: AnalyticsAction) =
+  let currentTimeStr = DateTime.now |> DateTime.toString
 
-type AnalyticsAction =
-  | CodeExecuted
-  | ThumbsUp
-  | ThumbsDown
-  | CodeExecuted of hasInputVariables: Bool
+  let dbKey = DB.generateKey_v0
+  let sessionId = Uuid.generate_v0
+  let darkPrompt = "TODO"
+  let userPrompt = "TODO"
+  let generatedCode = "TODO"
+  let actionJson = action |> Json.serialize<AnalyticsAction> |> Result.withDefault_v0 "<failed to stringify action>"
 
-[<DB("Analytics")>]
-type Analytics =
-  { SessionID: Uuid
-    DarkPrompt: String
-    UserPrompt: String
-    GeneratedCode: String
+  let analytic = {
+    SessionID = sessionId
+    DarkPrompt = darkPrompt
+    UserPrompt = userPrompt
+    GeneratedCode = generatedCode
 
-    // We assume it'll be of type AnalyticsAction
-    ActionJson: String}
+    ActionJson= actionJson}
+
+  let result = DB.set_v1 analytic dbKey AnalyticsDB
+
+  result
+
+
+
+
 
 [<HttpHandler("GET", "/")>]
 let handler req =
@@ -57,9 +97,11 @@ let handler req =
 
   logToFile "Got prompt"
 
+  addAnalytics ThumbsUp
+
   let respBody =
     match prompt with
-    | Ok p ->  p
+    | Ok p -> p
     | Error _ -> Bytes.empty
 
   Http.response respBody 200
