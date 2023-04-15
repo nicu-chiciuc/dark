@@ -29,47 +29,6 @@ let handler req =
 
 [<HttpHandler("GET", "/api/show-handler-req")>]
 let handler req =
-  // Request is
-  // {
-  //   body: ,
-  //   headers: [
-  //     (
-  //       "accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
-  //     ), (
-  //       "connection", "keep-alive"
-  //     ), (
-  //       "host", "nicu-canvas.dlio.localhost:11003"
-  //     ), (
-  //       "user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
-  //     ), (
-  //       "accept-encoding", "gzip, deflate, br"
-  //     ), (
-  //       "accept-language", "en-US,en;q=0.9,ro;q=0.8,ru;q=0.7"
-  //     ), (
-  //       "cache-control", "max-age=0"
-  //     ), (
-  //       "upgrade-insecure-requests", "1"
-  //     ), (
-  //       "sec-ch-ua", ""Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111""
-  //     ), (
-  //       "sec-ch-ua-mobile", "?0"
-  //     ), (
-  //       "sec-ch-ua-platform", ""macOS""
-  //     ), (
-  //       "dnt", "1"
-  //     ), (
-  //       "sec-fetch-site", "none"
-  //     ), (
-  //       "sec-fetch-mode", "navigate"
-  //     ), (
-  //       "sec-fetch-user", "?1"
-  //     ), (
-  //       "sec-fetch-dest", "document"
-  //     )
-  //   ],
-  //   url: "http://nicu-canvas.dlio.localhost:11003/api/show-handler-req"
-  // }
-  // Http.response request 200
 
 
   Http.response cookies 200
@@ -80,6 +39,9 @@ let handler req =
 
 let currentCanvasPath () =
     "/home/dark/app/canvases/nicu-canvas/"
+
+let httpRootPath () =
+    currentCanvasPath () ++ "bolero/output/wwwroot/"
 
 let getApiKey () =
   let maybeKey = File.read (currentCanvasPath () ++ "openai-api-key.txt")
@@ -126,7 +88,11 @@ let addAnalytics (action: AnalyticsAction) =
 [<HttpHandler("GET", "/")>]
 let handler req =
   let body = "hello"
-  let maybeFile = File.read (currentCanvasPath () ++ "index.html")
+  let path = httpRootPath () ++ "index.html"
+
+  logToFile (path ++ " nice")
+
+  let maybeFile = File.read path
 
   let file = match maybeFile with
     | Ok file -> file
@@ -138,8 +104,64 @@ let handler req =
     200
 
 
+[<HttpHandler("GET", "/:someFile")>]
+let handler req =
+  let path = httpRootPath () ++ someFile
 
-[<HttpHandler("GET", "/get-prompt")>]
+  let newUuid = Uuid.generate_v0
+
+  logToFile "---------"
+
+  logToFile path
+
+  let maybeFile = File.read path
+
+  logToFile "before match"
+
+  let file = match maybeFile with
+    | Ok file -> file
+    | Error -> "File not found"
+
+  logToFile "after match"
+
+  let arrSplit = String.split_v1 path  "."
+
+  logToFile "after split"
+
+  let fileExtension = match arrSplit  with
+    | [ _; ext ] -> ext
+    | _ -> ""
+
+  logToFile fileExtension
+
+  let contentType = match fileExtension with
+    | "js" -> "text/javascript"
+    | "css" -> "text/css"
+    | "html" -> "text/html"
+    | "dll" -> "application/octet-stream"
+    | "wasm" -> "application/wasm"
+    | "ico" -> "image/x-icon"
+    | _ -> "text/plain"
+
+  logToFile contentType
+
+
+  Http.responseWithHeaders
+    (file)
+    (Dict.fromListOverwritingDuplicates [ ("Content-Type", contentType) ])
+    200
+
+  let fileBytes = match maybeFile with
+    | Ok file -> file
+    | Error -> "File not found"
+
+  logToFile "toBytes"
+
+
+  Http.response fileBytes 200
+
+
+[<HttpHandler("GET", "/api/get-prompt")>]
 let handler req =
   let filePath = currentCanvasPath () ++ "prompt.txt"
   let prompt = File.read filePath
@@ -156,7 +178,7 @@ let handler req =
   Http.response respBody 200
 
 
-[<HttpHandler("GET", "/save-prompt")>]
+[<HttpHandler("GET", "/api/save-prompt")>]
 let handler req =
   let filePath = currentCanvasPath () ++ "prompt.txt"
   let contents =  request.body
