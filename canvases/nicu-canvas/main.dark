@@ -108,34 +108,38 @@ let handler req =
 let handler req =
   let path = httpRootPath () ++ someFile
 
-  let newUuid = Uuid.generate_v0
+  let newUuid = Uuid.toString Uuid.generate_v0
+  let maybeHead = List.head (String.split_v1 newUuid  "-")
+  let headUuid = Option.withDefault_v0 maybeHead "no head"
 
-  logToFile "---------"
 
-  logToFile path
+  logToFile (headUuid ++ "---------")
+
+  logToFile (headUuid ++ " someFile: " ++ someFile)
 
   let maybeFile = File.read path
 
-  logToFile "before match"
+  logToFile (headUuid ++ " before match")
 
   let file = match maybeFile with
     | Ok file -> file
     | Error -> "File not found"
 
-  logToFile "after match"
+  logToFile (headUuid ++ " after match")
 
   let arrSplit = String.split_v1 path  "."
 
-  logToFile "after split"
+  logToFile (headUuid ++ " after split")
 
-  let fileExtension = match arrSplit  with
-    | [ _; ext ] -> ext
-    | _ -> ""
+  let maybeFileExtension = List.last_v2 arrSplit
 
-  logToFile fileExtension
+  let fileExtension = Option.withDefault_v0 maybeFileExtension "<no extension>"
+
+  logToFile (headUuid ++ " fileExtension: " ++ fileExtension)
 
   let contentType = match fileExtension with
     | "js" -> "text/javascript"
+    | "json" -> "application/json"
     | "css" -> "text/css"
     | "html" -> "text/html"
     | "dll" -> "application/octet-stream"
@@ -143,7 +147,7 @@ let handler req =
     | "ico" -> "image/x-icon"
     | _ -> "text/plain"
 
-  logToFile contentType
+  logToFile (headUuid ++ " contentType: " ++ contentType)
 
 
   Http.responseWithHeaders
