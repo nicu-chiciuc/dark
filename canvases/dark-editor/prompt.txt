@@ -125,9 +125,7 @@ need to call any functions.
 
 ---
 
-Your job is to assist in building an application in Dark. When you reply, only provide the code and config.yml with no explanation.
-
-Wait for the user to provide a prompt.
+Your job is to assist in building an application in Dark. Wait for the user to provide a prompt.
 
 ---
 
